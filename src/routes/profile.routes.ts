@@ -73,7 +73,16 @@ router.post('/avatar', requireAuth, upload.single('avatar'), async (req, res) =>
 });
 
 async function fetchProfile(userId: string) {
-  const rows = await query(
+  type ProfileRow = {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    headline: string | null;
+    avatar_url: string | null;
+  };
+
+  const rows = await query<ProfileRow>(
     `SELECT id, name, email, role, headline, avatar_url
      FROM app_users WHERE id = $1`,
     [userId]
