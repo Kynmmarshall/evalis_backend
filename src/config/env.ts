@@ -14,4 +14,5 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL as string,
   jwtSecret: process.env.JWT_SECRET as string,
   assetBaseUrl: process.env.ASSET_BASE_URL ?? '',
+  lecturerAccessCode: (process.env.LECTURER_ACCESS_CODE ?? '').trim(),
 };

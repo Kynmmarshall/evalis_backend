@@ -16,13 +16,13 @@ const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.enum(['lecturer', 'student']),
   headline: z.string().optional().default(''),
 });
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  lecturerCode: z.string().optional(),
 });
 
 router.post('/register', async (req, res) => {
@@ -36,7 +36,7 @@ router.post('/register', async (req, res) => {
     `INSERT INTO app_users (name, email, password_hash, role, headline)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING ${userFields}`,
-    [body.name, body.email, passwordHash, body.role, body.headline]
+    [body.name, body.email, passwordHash, 'student', body.headline]
   );
   const user = rows[0];
   const token = signToken(user.id, user.role);
@@ -57,9 +57,10 @@ router.post('/login', async (req, res) => {
   if (!ok) {
     throw new HttpError(401, 'Invalid credentials');
   }
-  const token = signToken(user.id, user.role);
   const { password_hash, ...safeUser } = user;
-  res.json({ token, user: safeUser });
+  const effectiveRole = shouldElevateRole(body.lecturerCode) ? 'lecturer' : safeUser.role;
+  const token = signToken(user.id, effectiveRole);
+  res.json({ token, user: { ...safeUser, role: effectiveRole } });
 });
 
 router.get('/me', requireAuth, async (req, res) => {
@@ -71,11 +72,23 @@ router.get('/me', requireAuth, async (req, res) => {
   if (!user) {
     throw new HttpError(404, 'User not found');
   }
-  res.json({ user });
+  const requestedRole = req.user?.role === 'lecturer' ? 'lecturer' : user.role;
+  res.json({ user: { ...user, role: requestedRole } });
 });
 
 function signToken(id: string, role: 'lecturer' | 'student') {
   return jwt.sign({ role }, env.jwtSecret, { subject: id, expiresIn: '7d' });
+}
+
+function shouldElevateRole(code?: string | null) {
+  if (!env.lecturerAccessCode) {
+    return false;
+  }
+  const provided = code?.trim();
+  if (!provided) {
+    return false;
+  }
+  return provided.toLowerCase() === env.lecturerAccessCode.toLowerCase();
 }
 
 export default router;
