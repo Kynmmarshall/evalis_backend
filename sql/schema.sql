@@ -52,15 +52,6 @@ CREATE TABLE IF NOT EXISTS exam_briefs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS learning_resources (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    format TEXT NOT NULL,
-    eta TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 CREATE TABLE IF NOT EXISTS mock_questions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     exam_id TEXT NOT NULL REFERENCES exam_briefs(id) ON DELETE CASCADE,
@@ -83,14 +74,6 @@ CREATE TABLE IF NOT EXISTS feedback_entries (
     detail TEXT NOT NULL,
     is_correct BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS past_materials (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    title TEXT NOT NULL,
-    topic TEXT NOT NULL,
-    duration TEXT NOT NULL,
-    difficulty TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS student_scores (

@@ -11,9 +11,7 @@ import authRouter from './routes/auth.routes';
 import coursesRouter from './routes/courses.routes';
 import enrollmentsRouter from './routes/enrollments.routes';
 import examsRouter from './routes/exams.routes';
-import materialsRouter from './routes/materials.routes';
 import profileRouter from './routes/profile.routes';
-import resourcesRouter from './routes/resources.routes';
 import scoresRouter from './routes/scores.routes';
 import feedbackRouter from './routes/feedback.routes';
 
@@ -33,8 +31,6 @@ app.use('/api/profile', profileRouter);
 app.use('/api/courses', coursesRouter);
 app.use('/api/enrollments', enrollmentsRouter);
 app.use('/api/exams', examsRouter);
-app.use('/api/materials', materialsRouter);
-app.use('/api/resources', resourcesRouter);
 app.use('/api/scores', scoresRouter);
 app.use('/api/feedback', feedbackRouter);
 
