@@ -63,6 +63,12 @@ router.post('/', requireAuth, async (req, res) => {
      ON CONFLICT (code) DO UPDATE SET title = EXCLUDED.title, lecturer = EXCLUDED.lecturer, schedule = EXCLUDED.schedule`,
     [code, body.title, lecturerName, schedule]
   );
+  await query(
+    `INSERT INTO user_courses (user_id, course_code)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id, course_code) DO NOTHING`,
+    [req.user!.id, code]
+  );
   res.status(201).json({ message: 'Course saved', code });
 });
 
