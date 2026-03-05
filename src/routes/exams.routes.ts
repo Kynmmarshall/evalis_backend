@@ -52,9 +52,9 @@ router.get('/:id/questions', requireAuth, async (req, res) => {
               ORDER BY o.option_index) AS options
      FROM mock_questions q
      JOIN mock_question_options o ON o.question_id = q.id
-     WHERE q.exam_id = $1
-     GROUP BY q.id
-     ORDER BY q.created_at ASC`,
+    WHERE q.exam_id = $1
+    GROUP BY q.id
+    ORDER BY q.id ASC`,
     [req.params.id]
   );
   const payload = questions.map((row: any) => ({
