@@ -49,6 +49,9 @@ CREATE TABLE IF NOT EXISTS exam_briefs (
     title TEXT NOT NULL,
     course_code TEXT NOT NULL REFERENCES courses(code) ON DELETE CASCADE,
     exam_window TEXT NOT NULL,
+    start_at TIMESTAMPTZ,
+    end_at TIMESTAMPTZ,
+    launched BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
