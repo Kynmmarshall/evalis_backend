@@ -56,7 +56,7 @@ router.get('/', requireAuth, async (req, res) => {
       sql = `${baseSelect}
                WHERE launched = TRUE
                  AND end_at IS NOT NULL
-                 AND end_at < now()
+                 AND end_at <= now()
                ORDER BY end_at DESC`;
       break;
     case 'live':
@@ -65,7 +65,8 @@ router.get('/', requireAuth, async (req, res) => {
                WHERE launched = TRUE
                  AND start_at IS NOT NULL
                  AND end_at IS NOT NULL
-                 AND now() BETWEEN start_at AND end_at
+                 AND now() >= start_at
+                 AND now() < end_at
                ORDER BY start_at ASC`;
       break;
   }
@@ -234,7 +235,7 @@ function isExamLive(exam: ExamGuardRow): boolean {
     return false;
   }
   const now = new Date();
-  return now >= exam.startAt && now <= exam.endAt;
+  return now >= exam.startAt && now < exam.endAt;
 }
 
 function isExamClosed(exam: ExamGuardRow): boolean {
@@ -242,7 +243,7 @@ function isExamClosed(exam: ExamGuardRow): boolean {
     return false;
   }
   const now = new Date();
-  return now > exam.endAt;
+  return now >= exam.endAt;
 }
 
 export default router;
