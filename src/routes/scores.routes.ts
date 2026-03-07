@@ -52,7 +52,7 @@ router.get('/', requireAuth, async (req, res) => {
          FROM exam_responses r
          JOIN mock_questions q ON q.id = r.question_id
          JOIN app_users u ON u.id = r.user_id
-        WHERE r.exam_id = ANY($1)
+        WHERE r.exam_id = ANY($1::text[])
         GROUP BY r.exam_id, r.user_id, u.name
         ORDER BY r.exam_id, u.name`,
       [examIds]
