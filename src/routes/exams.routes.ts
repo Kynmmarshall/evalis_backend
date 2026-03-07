@@ -177,6 +177,15 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
   res.status(201).json({ message: 'Question saved', id: questionId });
 });
 
+router.post('/:id/delete', requireAuth, async (req, res) => {
+  if (req.user!.role !== 'lecturer') {
+    throw new HttpError(403, 'Only lecturers can delete exams');
+  }
+  await ensureExamOwnership(req.user!.id, req.params.id);
+  await query('DELETE FROM exam_briefs WHERE id = $1', [req.params.id]);
+  res.json({ message: 'Exam deleted' });
+});
+
 function parseSchedule(startAt?: string, endAt?: string) {
   const start = startAt ? parseDate(startAt) : null;
   const end = endAt ? parseDate(endAt) : null;
