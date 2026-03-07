@@ -40,24 +40,22 @@ router.get('/', requireAuth, async (req, res) => {
     return;
   }
 
-  const examIds = exams.map((exam) => exam.id);
-  let studentRows: ExamScoreRow[] = [];
-  if (examIds.length) {
-    studentRows = await query<ExamScoreRow>(
-      `SELECT r.exam_id AS "examId",
-              r.user_id AS "studentId",
-              u.name AS "studentName",
-              COUNT(*)::int AS "answeredQuestions",
-              SUM(CASE WHEN r.selected_index = q.correct_index THEN 1 ELSE 0)::int AS "correctAnswers"
-         FROM exam_responses r
-         JOIN mock_questions q ON q.id = r.question_id
-         JOIN app_users u ON u.id = r.user_id
-        WHERE r.exam_id = ANY($1::text[])
-        GROUP BY r.exam_id, r.user_id, u.name
-        ORDER BY r.exam_id, u.name`,
-      [examIds]
-    );
-  }
+  const studentRows = await query<ExamScoreRow>(
+    `SELECT r.exam_id AS "examId",
+            r.user_id AS "studentId",
+            u.name AS "studentName",
+            COUNT(*)::int AS "answeredQuestions",
+            SUM(CASE WHEN r.selected_index = q.correct_index THEN 1 ELSE 0)::int AS "correctAnswers"
+       FROM exam_responses r
+       JOIN mock_questions q ON q.id = r.question_id
+       JOIN app_users u ON u.id = r.user_id
+       JOIN exam_briefs e ON e.id = r.exam_id
+      WHERE e.launched = TRUE
+        AND e.end_at IS NOT NULL
+        AND e.end_at <= now()
+      GROUP BY r.exam_id, r.user_id, u.name
+      ORDER BY r.exam_id, u.name`
+  );
 
   const grouped = exams.map((exam) => ({
     ...exam,
