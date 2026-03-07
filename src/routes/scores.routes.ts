@@ -19,6 +19,7 @@ router.get('/', requireAuth, async (req, res) => {
     throw new HttpError(403, 'Only lecturers can view score summaries');
   }
 
+  console.log('[scores] fetching closed exams');
   const exams = await query(
     `SELECT e.id,
             e.title,
@@ -34,12 +35,14 @@ router.get('/', requireAuth, async (req, res) => {
       GROUP BY e.id
       ORDER BY e.end_at DESC`
   );
+  console.log('[scores] closed exams:', exams.map((exam) => exam.id));
 
   if (!exams.length) {
     res.json({ exams: [] });
     return;
   }
 
+  console.log('[scores] aggregating student rows');
   const studentRows = await query<ExamScoreRow>(
     `SELECT r.exam_id AS "examId",
             r.user_id AS "studentId",
@@ -56,6 +59,7 @@ router.get('/', requireAuth, async (req, res) => {
       GROUP BY r.exam_id, r.user_id, u.name
       ORDER BY r.exam_id, u.name`
   );
+  console.log('[scores] student rows fetched:', studentRows.length);
 
   const grouped = exams.map((exam) => ({
     ...exam,
