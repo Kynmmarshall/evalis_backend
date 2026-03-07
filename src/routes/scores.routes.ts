@@ -48,7 +48,7 @@ router.get('/', requireAuth, async (req, res) => {
             r.user_id AS "studentId",
             u.name AS "studentName",
             COUNT(*)::int AS "answeredQuestions",
-            SUM(CASE WHEN r.selected_index = q.correct_index THEN 1 ELSE 0)::int AS "correctAnswers"
+            SUM(CASE WHEN r.selected_index = q.correct_index THEN 1 ELSE 0 END)::int AS "correctAnswers"
        FROM exam_responses r
        JOIN mock_questions q ON q.id = r.question_id
        JOIN app_users u ON u.id = r.user_id
