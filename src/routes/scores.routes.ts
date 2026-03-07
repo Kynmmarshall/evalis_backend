@@ -43,7 +43,6 @@ router.get('/', requireAuth, async (req, res) => {
   const examIds = exams.map((exam) => exam.id);
   let studentRows: ExamScoreRow[] = [];
   if (examIds.length) {
-    const placeholders = examIds.map((_, index) => `$${index + 1}`).join(', ');
     studentRows = await query<ExamScoreRow>(
       `SELECT r.exam_id AS "examId",
               r.user_id AS "studentId",
@@ -53,10 +52,10 @@ router.get('/', requireAuth, async (req, res) => {
          FROM exam_responses r
          JOIN mock_questions q ON q.id = r.question_id
          JOIN app_users u ON u.id = r.user_id
-        WHERE r.exam_id IN (${placeholders})
+        WHERE r.exam_id = ANY($1)
         GROUP BY r.exam_id, r.user_id, u.name
         ORDER BY r.exam_id, u.name`,
-      examIds
+      [examIds]
     );
   }
 
