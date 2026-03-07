@@ -43,19 +43,33 @@ router.get('/', requireAuth, async (req, res) => {
     `SELECT id, title, course_code AS "courseCode", exam_window AS "examWindow",
             start_at AS "startAt", end_at AS "endAt", launched
        FROM exam_briefs`;
-  let exams;
   if (req.user!.role === 'lecturer') {
-    exams = await query(`${baseSelect} ORDER BY created_at DESC`);
-  } else {
-    exams = await query(
-      `${baseSelect}
-         WHERE launched = TRUE
-           AND start_at IS NOT NULL
-           AND end_at IS NOT NULL
-           AND now() BETWEEN start_at AND end_at
-         ORDER BY start_at ASC`
-    );
+    const exams = await query(`${baseSelect} ORDER BY created_at DESC`);
+    res.json({ exams });
+    return;
   }
+
+  const state = typeof req.query.state === 'string' ? req.query.state : 'live';
+  let sql: string;
+  switch (state) {
+    case 'closed':
+      sql = `${baseSelect}
+               WHERE launched = TRUE
+                 AND end_at IS NOT NULL
+                 AND end_at < now()
+               ORDER BY end_at DESC`;
+      break;
+    case 'live':
+    default:
+      sql = `${baseSelect}
+               WHERE launched = TRUE
+                 AND start_at IS NOT NULL
+                 AND end_at IS NOT NULL
+                 AND now() BETWEEN start_at AND end_at
+               ORDER BY start_at ASC`;
+      break;
+  }
+  const exams = await query(sql);
   res.json({ exams });
 });
 
@@ -111,7 +125,7 @@ router.get('/:id/questions', requireAuth, async (req, res) => {
   if (!exam) {
     throw new HttpError(404, 'Exam not found');
   }
-  if (req.user!.role === 'student' && !isExamLive(exam)) {
+  if (req.user!.role === 'student' && !isExamLive(exam) && !isExamClosed(exam)) {
     throw new HttpError(403, 'Exam is not available right now');
   }
   const questions = await query(
@@ -221,6 +235,14 @@ function isExamLive(exam: ExamGuardRow): boolean {
   }
   const now = new Date();
   return now >= exam.startAt && now <= exam.endAt;
+}
+
+function isExamClosed(exam: ExamGuardRow): boolean {
+  if (!exam.launched || !exam.endAt) {
+    return false;
+  }
+  const now = new Date();
+  return now > exam.endAt;
 }
 
 export default router;
