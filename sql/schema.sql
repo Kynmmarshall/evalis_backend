@@ -70,6 +70,16 @@ CREATE TABLE IF NOT EXISTS mock_question_options (
     PRIMARY KEY (question_id, option_index)
 );
 
+CREATE TABLE IF NOT EXISTS exam_responses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    exam_id TEXT NOT NULL REFERENCES exam_briefs(id) ON DELETE CASCADE,
+    question_id UUID NOT NULL REFERENCES mock_questions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+    selected_index INT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (question_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS feedback_entries (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
@@ -90,3 +100,4 @@ CREATE TABLE IF NOT EXISTS student_scores (
 
 CREATE INDEX IF NOT EXISTS idx_course_enrollments_user ON course_enrollments(user_id);
 CREATE INDEX IF NOT EXISTS idx_course_enrollments_course ON course_enrollments(course_code);
+CREATE INDEX IF NOT EXISTS idx_exam_responses_exam_user ON exam_responses(exam_id, user_id);

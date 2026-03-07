@@ -31,11 +31,20 @@ const questionSchema = z.object({
   tip: z.string().optional().default(''),
 });
 
+const responseSchema = z.object({
+  optionIndex: z.number().int().min(0),
+});
+
 type ExamGuardRow = {
   courseCode: string;
   startAt: Date | null;
   endAt: Date | null;
   launched: boolean;
+};
+
+type QuestionGuardRow = {
+  examId: string;
+  optionCount: number;
 };
 
 router.get('/', requireAuth, async (req, res) => {
@@ -140,6 +149,19 @@ router.get('/:id/questions', requireAuth, async (req, res) => {
      ORDER BY q.id ASC`,
     [req.params.id]
   );
+  let responseMap: Record<string, number> = {};
+  if (req.user!.role === 'student') {
+    const responses = await query<{ questionId: string; selectedIndex: number }>(
+      `SELECT question_id AS "questionId", selected_index AS "selectedIndex"
+         FROM exam_responses
+        WHERE exam_id = $1 AND user_id = $2`,
+      [req.params.id, req.user!.id]
+    );
+    responseMap = responses.reduce<Record<string, number>>((acc, row) => {
+      acc[row.questionId] = row.selectedIndex;
+      return acc;
+    }, {});
+  }
   const payload = questions.map((row: any) => ({
     id: row.id,
     prompt: row.prompt,
@@ -148,6 +170,7 @@ router.get('/:id/questions', requireAuth, async (req, res) => {
     options: row.options
       .sort((a: any, b: any) => a.option_index - b.option_index)
       .map((option: any) => option.option_text),
+    selectedIndex: responseMap[row.id] ?? null,
   }));
   res.json({ questions: payload });
 });
@@ -175,6 +198,51 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
     );
   }
   res.status(201).json({ message: 'Question saved', id: questionId });
+});
+
+router.post('/:id/questions/:questionId/response', requireAuth, async (req, res) => {
+  if (req.user!.role !== 'student') {
+    throw new HttpError(403, 'Only students can record responses');
+  }
+  const body = responseSchema.parse(req.body);
+  const exam = await loadExamGuardRow(req.params.id);
+  if (!exam) {
+    throw new HttpError(404, 'Exam not found');
+  }
+  if (!isExamLive(exam)) {
+    throw new HttpError(403, 'Exam is not live');
+  }
+  const question = await loadQuestionGuardRow(req.params.questionId);
+  if (!question) {
+    throw new HttpError(404, 'Question not found');
+  }
+  if (question.examId !== req.params.id) {
+    throw new HttpError(400, 'Question does not belong to this exam');
+  }
+  if (body.optionIndex >= question.optionCount) {
+    throw new HttpError(400, 'optionIndex out of range');
+  }
+  const inserted = await query<{ selectedIndex: number }>(
+    `INSERT INTO exam_responses (exam_id, question_id, user_id, selected_index)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (question_id, user_id) DO NOTHING
+     RETURNING selected_index AS "selectedIndex"`,
+    [req.params.id, req.params.questionId, req.user!.id, body.optionIndex]
+  );
+  let selectedIndex = body.optionIndex;
+  if (!inserted.length) {
+    const existing = await query<{ selectedIndex: number }>(
+      `SELECT selected_index AS "selectedIndex"
+         FROM exam_responses
+        WHERE question_id = $1 AND user_id = $2`,
+      [req.params.questionId, req.user!.id]
+    );
+    if (!existing.length) {
+      throw new HttpError(500, 'Unable to save response');
+    }
+    selectedIndex = existing[0].selectedIndex;
+  }
+  res.status(inserted.length ? 201 : 200).json({ selectedIndex });
 });
 
 router.post('/:id/delete', requireAuth, async (req, res) => {
@@ -235,6 +303,19 @@ async function loadExamGuardRow(examId: string) {
        FROM exam_briefs
       WHERE id = $1`,
     [examId]
+  );
+  return rows[0];
+}
+
+async function loadQuestionGuardRow(questionId: string) {
+  const rows = await query<QuestionGuardRow>(
+    `SELECT q.exam_id AS "examId",
+            COUNT(o.option_index)::int AS "optionCount"
+       FROM mock_questions q
+       JOIN mock_question_options o ON o.question_id = q.id
+      WHERE q.id = $1
+      GROUP BY q.exam_id`,
+    [questionId]
   );
   return rows[0];
 }
